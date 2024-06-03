@@ -6,91 +6,97 @@ ENV DEBIAN_FRONTEND=noninteractive
 ENV LANG=C.UTF-8
 ENV LC_ALL=C.UTF-8
 
-# Install essential tools and libraries
-RUN apt-get update && apt-get -y upgrade && apt-get install -y --no-install-recommends \
-    software-properties-common \
-    build-essential \
+ENV SHELL=/bin/bash \
+    USER=arg \
+    UID=1000 \
+    LANG=en_US.UTF-8 \
+    LANGUAGE=en_US.UTF-8
+
+ENV HOME=/home/${USER}
+
+RUN adduser --disabled-password \
+    --gecos "Default user" \
+    --uid ${UID} \
+    ${USER}
+
+RUN echo "root:root" | chpasswd
+RUN echo "${USER}:111111" | chpasswd
+
+# Add the necessary key
+RUN apt-key adv --keyserver keyserver.ubuntu.com --recv-keys A4B469963BF863CC
+
+# Update the package list, perform a distribution upgrade, and install essential packages
+RUN apt-get -o Acquire::ForceIPv4=true update && apt-get -yq dist-upgrade \
+    && apt-get -o Acquire::ForceIPv4=true install -yq --no-install-recommends \ 
+    locales \
     cmake \
-    git \
-    wget \
-    curl \
-    vim \
-    sudo \
     unzip \
-    pkg-config \
-    libjpeg-dev \
-    libpng-dev \
-    libtiff-dev \
-    libavcodec-dev \
-    libavformat-dev \
-    libswscale-dev \
-    libv4l-dev \
-    libxvidcore-dev \
-    libx264-dev \
-    libgtk-3-dev \
+    make \
+    git \
+    vim \
+    gedit \
+    wget \
+    sudo \
+    lsb-release \
+    build-essential \
+    net-tools \
+    dirmngr \
+    gnupg2 \
+    mercurial \
     libcanberra-gtk-module \
     libcanberra-gtk3-module \
-    libatlas-base-dev \
-    gfortran \
-    && add-apt-repository ppa:deadsnakes/ppa \
-    && apt-get update \
-    && apt-get install -y python3.12 python3.12-dev python3.12-distutils \
+    libpcap-dev \
+    python3-pip \
+    python3-setuptools \
+    python3-opencv \
+    python3-numpy \
+    python3-empy  \
+    python3-dev \ 
+    python3-tk \ 
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
-# Upgrade pip and setuptools
-RUN wget https://bootstrap.pypa.io/get-pip.py && python3.12 get-pip.py && rm get-pip.py
 
-# Ensure that python3 points to python3.12
-RUN update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.12 1
+RUN pip3 install --upgrade pip setuptools
 
-# Upgrade pip
-RUN python3.12 -m pip install --upgrade pip setuptools
-
-# Install Python Machine Learning and Deep Learning libraries
-RUN python3.12 -m pip install \
-    numpy \
-    scipy \
-    pandas \
-    scikit-learn \
+RUN pip3 install \
     matplotlib \
-    seaborn \
-    jupyter \
-    jupyterlab
-
-# Install PyTorch 2.3.0 with CUDA 11.8 support
-RUN python3.12 -m pip install https://download.pytorch.org/whl/cu118/torch-2.3.0%2Bcu118-cp312-cp312-linux_x86_64.whl#sha256=eceaa7ba73df1b0c37d76a5c9eaa1a1ae141512bcae4ed259f2bf06aea591bc3
-
-# Install torchvision compatible with CUDA 11.8 support
-RUN python3.12 -m pip install https://download.pytorch.org/whl/cu118/torchvision-0.18.0%2Bcu118-cp312-cp312-linux_x86_64.whl#sha256=30ecda1b67372eeaa68409e242cf28192f71d58d94840ec41c12e7a686ad1747
-
-# Install torchaudio compatible with CUDA 11.8 support
-RUN python3.12 -m pip install https://download.pytorch.org/whl/cu118/torchaudio-2.3.0%2Bcu118-cp312-cp312-linux_x86_64.whl#sha256=1d7a4342296f6ef8ad11bfe103378ce0c66a0ffd860105d6f9b863d3c7f8a7f1
-
-# Install additional libraries for transformers and detection models
-RUN python3.12 -m pip install \
-    opencv-python \
-    opencv-contrib-python \
-    pillow \
-    tqdm \
-    h5py \
-    requests \
-    pyyaml \
-    typing-extensions \
-    protobuf \
-    tensorboard \
-    tensorboardX
-
-# Install Hugging Face transformers and other necessary libraries
-RUN python3.12 -m pip install transformers timm datasets
-
-# Install additional tools
-RUN python3.12 -m pip install \
+    pandas \
+    quart \
     rich \
-    ipywidgets \
-    mypy
+    seaborn \
+    ftfy \
+    opencv-python
 
-# Set the default command to bash
+# Install PyTorch, torchvision, and torchaudio with CUDA 11.8 support
+RUN pip3 install \
+    https://download.pytorch.org/whl/cu118/torch-2.3.0%2Bcu118-cp38-cp38-linux_x86_64.whl#sha256=d4375df5c2ea5996578faddece62cd31621719686904086ec4242d40cb37247f \  
+    https://download.pytorch.org/whl/cu118/torchvision-0.18.0%2Bcu118-cp38-cp38-linux_x86_64.whl#sha256=8ad3a67e0484f147bd5e6741a597e4a33416487f163fdcf3eed31431d4c84da7 \
+    https://download.pytorch.org/whl/cu118/torchaudio-2.3.0%2Bcu118-cp38-cp38-linux_x86_64.whl#sha256=c92ecea52a9f239429619ca6172896c6d2e0323c9cd6f4edd08363be2e82412d    
+
+RUN pip3 install 'git+https://github.com/facebookresearch/detectron2.git'
+
+RUN pip3 install mmcv==2.2.0 -f https://download.openmmlab.com/mmcv/dist/cu118/torch2.3/index.html
+
+RUN pip3 install scikit-learn
+
+RUN pip3 install transformers \
+    datasets \
+    evaluate \
+    transformers[sentencepiece] \
+    accelerate \
+    timm \
+    albumentations
+
+RUN pip3 install jupyter 
+
+
+RUN chown -R ${USER}:${USER} ${HOME}/
+RUN echo "${USER} ALL=(ALL)  ALL" >> /etc/sudoers
+
+ENV NVIDIA_VISIBLE_DEVICES=all
+ENV NVIDIA_DRIVER_CAPABILITIES=all
+
+USER ${USER}
+WORKDIR ${HOME}
 CMD ["/bin/bash"]
-
-
